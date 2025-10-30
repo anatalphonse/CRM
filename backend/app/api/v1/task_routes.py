@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession as Session
 from app.core.deps import get_db
 from app import models, schemas, services
 from app.core.security import get_current_user
@@ -7,10 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import func, or_, desc, asc
 
-router = APIRouter(
-    prefix="/tasks",
-    tags=["Tasks"]
-)
+router = APIRouter()
 
 
 @router.post("", response_model=schemas.task.TaskOut)

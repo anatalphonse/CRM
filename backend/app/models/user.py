@@ -1,11 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean, Enum, DateTime, Index
-from sqlalchemy.dialects.postgresql import TSVECTOR
 from app.core.database import Base
 from sqlalchemy.orm import relationship
-from sqlalchemy import Boolean
 from sqlalchemy.sql import func
 import enum, uuid
-
 
 class UserRole(enum.Enum):
     admin = "admin"
@@ -26,7 +23,14 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        Index("idx_users_name_email_trgm", "name", "email", postgresql_using = "gin"),
+        # Specify operator class for GIN trigram index
+        Index(
+            "idx_users_name_email_trgm",
+            "name",
+            "email",
+            postgresql_using="gin",
+            postgresql_ops={"name": "gin_trgm_ops", "email": "gin_trgm_ops"},
+        ),
     )
 
     contacts = relationship("Contact", back_populates="owner", cascade="all, delete")

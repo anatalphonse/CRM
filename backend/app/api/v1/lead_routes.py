@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession as Session
 from app.core.deps import get_db
 from app import models, schemas, services
 from app.core.security import get_current_user
@@ -7,10 +7,7 @@ from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import func, or_, desc, asc
 
-router = APIRouter(
-    prefix="/leads",
-    tags=["Leads"]
-)
+router = APIRouter()
 
 
 @router.post("", response_model=schemas.lead.LeadOut)
@@ -36,7 +33,8 @@ def list_lead(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    query = db.query(models.Lead).filter(models.Lead.owner_id == current_user.id)
+    query = db.query(models.Lead).filter(
+        models.Lead.owner_id == current_user.id)
 
     # Filter
     if status:
@@ -47,23 +45,26 @@ def list_lead(
         query = query.filter(models.Lead.created_at >= created_after)
     if created_before:
         created_before = created_before.replace(microsecond=0)
-        query = query.filter(func.date(models.Lead.created_at) <= created_before.date())
-    
-    #Global Search
+        query = query.filter(
+            func.date(models.Lead.created_at) <= created_before.date())
+
+    # Global Search
     if q:
         leads = services.user_service.search_leads_fuzzy(db, q, skip, limit)
         total = len(leads)
         return {"total": total, "items": leads}
-    
+
     # Sorting
     sort_column = getattr(models.Lead, sort_by, models.Lead.id)
-    query = query.order_by(desc(sort_column)) if sort_order == "desc" else query.order_by(asc(sort_column))
+    query = query.order_by(
+        desc(sort_column)) if sort_order == "desc" else query.order_by(asc(sort_column))
 
     # Pagination
     total = query.count()
     leads = query.offset(skip).limit(limit).all()
 
     return {"total": total, "items": leads}
+
 
 @router.get("/search", response_model=List[schemas.lead.LeadOut])
 def search_leads(
@@ -104,15 +105,18 @@ def update_lead(
         db.refresh(lead)
         return lead
 
+
 @router.delete("/{lead_id}")
 def delete_lead(
     lead_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    lead = db.query(models.Lead).filter_by(id=lead_id, owner_id=current_user.id).first()
+    lead = db.query(models.Lead).filter_by(
+        id=lead_id, owner_id=current_user.id).first()
     if not lead:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Lead not found")
     db.delete(lead)
     db.commit()
     return {"detail": "Lead deleted"}

@@ -18,9 +18,15 @@ class Contact(Base):
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    # Use gin_trgm_ops for text columns so GIN trigram works
     __table_args__ = (
-        Index("idx_contacts_name_email_trgm", "name", "email", postgresql_using="gin"),
+        Index(
+            "idx_contacts_name_email_trgm",
+            "name",
+            "email",
+            postgresql_using="gin",
+            postgresql_ops={"name": "gin_trgm_ops", "email": "gin_trgm_ops"},
+        ),
     )
-
 
     owner = relationship("User", back_populates="contacts")
